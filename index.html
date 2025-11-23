@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>세그먼트 트리 시각화</title>
+<style>
+body{margin:0;padding:24px;background:#020617;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+h1{font-size:22px;margin:0 0 16px;font-weight:700;letter-spacing:.01em}
+.wrap{max-width:1100px;margin:0 auto}
+.box{background:radial-gradient(circle at top,#020617 0,#020617 40%,#020617 100%);border-radius:16px;padding:16px 18px;margin-bottom:14px;border:1px solid rgba(148,163,184,.3);box-shadow:0 18px 40px rgba(15,23,42,.7)}
+label{font-size:13px;display:block;margin-bottom:4px}
+input[type=text],input[type=number]{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:999px;border:1px solid rgba(148,163,184,.4);background:rgba(15,23,42,.9);color:#e5e7eb;font-size:13px;outline:none;transition:border .15s,box-shadow .15s,background .15s}
+input[type=text]:focus,input[type=number]:focus{border-color:#38bdf8;box-shadow:0 0 0 1px rgba(56,189,248,.6);background:#020617}
+.row{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+.row>div{flex:1 1 180px}
+button{padding:8px 14px;font-size:13px;border-radius:999px;border:0;cursor:pointer;background:linear-gradient(135deg,#22c55e,#3b82f6);color:#f9fafb;font-weight:600;margin-top:10px;box-shadow:0 10px 20px rgba(37,99,235,.5);transition:transform .1s,box-shadow .1s,filter .1s}
+button:hover{filter:brightness(1.05);transform:translateY(-1px);box-shadow:0 14px 30px rgba(37,99,235,.7)}
+button:active{transform:translateY(0);box-shadow:0 8px 18px rgba(37,99,235,.4)}
+small{color:#9ca3af;font-size:11px}
+.section-title{font-size:14px;margin-bottom:6px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:#9ca3af}
+.visual-wrap{display:flex;flex-direction:column;gap:16px}
+.section-sub{font-size:12px;margin-bottom:6px;color:#cbd5f5;display:flex;align-items:center;gap:6px}
+.section-sub span.dot{width:7px;height:7px;border-radius:999px;background:radial-gradient(circle,#38bdf8,#0ea5e9)}
+#array{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:8px 10px;border-radius:14px;background:linear-gradient(145deg,rgba(15,23,42,.95),rgba(15,23,42,.7));border:1px solid rgba(148,163,184,.2)}
+.array-cell{min-width:40px;padding:8px 6px;border-radius:12px;background:radial-gradient(circle at top,#0f172a,#020617);border:1px solid rgba(148,163,184,.35);text-align:center;font-size:13px;position:relative;font-weight:500;box-shadow:0 10px 20px rgba(15,23,42,.9);transform-origin:bottom;transition:transform .18s,box-shadow .18s,border .18s}
+.array-cell-index{position:absolute;bottom:-16px;left:0;right:0;font-size:10px;color:#6b7280}
+#tree{position:relative;padding:16px 10px 8px;border-radius:18px;background:radial-gradient(circle at top,#020617,#020617 60%,#020617 100%);border:1px solid rgba(148,163,184,.3);overflow:hidden}
+#tree-inner{position:relative;z-index:1;display:flex;flex-direction:column;gap:18px}
+.tree-level{display:flex;justify-content:center;gap:18px;flex-wrap:nowrap}
+.node{min-width:60px;padding:6px 8px;border-radius:14px;background:radial-gradient(circle at top,#1d2437,#020617);border:1px solid rgba(148,163,184,.35);font-size:11px;text-align:center;box-shadow:0 12px 26px rgba(15,23,42,.9);backdrop-filter:blur(6px);transition:transform .18s,box-shadow .18s,border .18s,background .18s}
+.node-value{font-size:13px;font-weight:600;color:#e5e7eb}
+.node-range{font-size:10px;color:#9ca3af;margin-top:2px}
+#tree-lines{position:absolute;top:0;left:0;z-index:0;pointer-events:none}
+#legend{display:flex;gap:14px;font-size:11px;color:#9ca3af;margin-top:8px;flex-wrap:wrap}
+.legend-box{display:inline-block;width:16px;height:10px;border-radius:999px;vertical-align:middle;margin-right:5px}
+.legend-hit{background:linear-gradient(90deg,#22c55e,#4ade80);box-shadow:0 0 10px rgba(34,197,94,.6)}
+.legend-upd{background:linear-gradient(90deg,#f97316,#fb923c);box-shadow:0 0 10px rgba(249,115,22,.6)}
+.hit{border-color:#4ade80 !important;box-shadow:0 0 0 1px rgba(74,222,128,.6),0 18px 32px rgba(16,185,129,.7);transform:translateY(-3px) scale(1.03);background:radial-gradient(circle at top,#14532d,#022c22)}
+.updated{border-color:#fb923c !important;box-shadow:0 0 0 1px rgba(251,146,60,.7),0 18px 32px rgba(249,115,22,.7);transform:translateY(-3px) scale(1.03);background:radial-gradient(circle at top,#7c2d12,#451a03)}
+#out{white-space:pre-wrap;font-size:13px;background:linear-gradient(145deg,rgba(15,23,42,.95),rgba(15,23,42,.7));border-radius:12px;padding:10px 12px;border:1px solid rgba(148,163,184,.3);margin-top:6px;min-height:40px;box-shadow:0 12px 26px rgba(15,23,42,.9)}
+.highlight-glow{animation:glow .8s ease-out}
+@keyframes glow{0%{box-shadow:0 0 0 0 rgba(56,189,248,.9)}100%{box-shadow:0 0 0 12px rgba(56,189,248,0)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>세그먼트 트리 시각화 (구간 합)</h1>
+
+<div class="box">
+<label for="arr">배열 입력 (공백 또는 콤마 구분)</label>
+<input id="arr" type="text" placeholder="예) 1 2 3 4 5 또는 1,2,3,4,5">
+<button id="build">트리 빌드</button>
+<small>0-based 인덱스 기준, 합 세그먼트 트리</small>
+</div>
+
+<div class="box">
+<div class="row">
+  <div>
+    <label for="l">구간 합 쿼리 L</label>
+    <input id="l" type="number" value="0">
+  </div>
+  <div>
+    <label for="r">구간 합 쿼리 R</label>
+    <input id="r" type="number" value="0">
+  </div>
+</div>
+<button id="query">구간 합 쿼리</button>
+</div>
+
+<div class="box">
+<div class="row">
+  <div>
+    <label for="idx">포인트 업데이트 인덱스</label>
+    <input id="idx" type="number" value="0">
+  </div>
+  <div>
+    <label for="val">새 값</label>
+    <input id="val" type="number" value="0">
+  </div>
+</div>
+<button id="update">포인트 업데이트</button>
+</div>
+
+<div class="box">
+<div class="section-title">시각화</div>
+<div class="visual-wrap">
+  <div>
+    <div class="section-sub"><span class="dot"></span>배열</div>
+    <div id="array"></div>
+  </div>
+  <div>
+    <div class="section-sub"><span class="dot"></span>세그먼트 트리 구조</div>
+    <div id="tree">
+      <svg id="tree-lines"></svg>
+      <div id="tree-inner"></div>
+    </div>
+  </div>
+  <div id="legend">
+    <div><span class="legend-box legend-hit"></span>쿼리에 사용된 노드/원소</div>
+    <div><span class="legend-box legend-upd"></span>업데이트 경로</div>
+  </div>
+</div>
+</div>
+
+<div class="box">
+<label>출력</label>
+<div id="out"></div>
+</div>
+</div>
+
+<script>
+const getEl=id=>document.getElementById(id);
+let arr=[],tree=[],rangeL=[],rangeR=[],depths=[],n=0,maxDepth=0;
+
+function buildTree(node,l,r,depth){
+  rangeL[node]=l;
+  rangeR[node]=r;
+  depths[node]=depth;
+  if(depth>maxDepth) maxDepth=depth;
+  if(l===r){
+    tree[node]=arr[l];
+    return;
+  }
+  const mid=(l+r)>>1;
+  const left=node<<1,right=left|1;
+  buildTree(left,l,mid,depth+1);
+  buildTree(right,mid+1,r,depth+1);
+  tree[node]=tree[left]+tree[right];
+}
+
+function clearHighlights(){
+  document.querySelectorAll(".hit,.updated").forEach(el=>{
+    el.classList.remove("hit");
+    el.classList.remove("updated");
+  });
+}
+
+function renderArray(){
+  const box=getEl("array");
+  box.innerHTML="";
+  for(let i=0;i<n;i++){
+    const cell=document.createElement("div");
+    cell.className="array-cell";
+    cell.dataset.index=i;
+    cell.textContent=arr[i];
+    const idx=document.createElement("div");
+    idx.className="array-cell-index";
+    idx.textContent=i;
+    cell.appendChild(idx);
+    box.appendChild(cell);
+  }
+}
+
+function renderTree(){
+  const container=getEl("tree-inner");
+  container.innerHTML="";
+  if(!n) return;
+  const levels=[];
+  for(let i=1;i<rangeL.length;i++){
+    if(rangeL[i]===undefined) continue;
+    const d=depths[i];
+    if(!levels[d]) levels[d]=[];
+    levels[d].push(i);
+  }
+  for(let d=0;d<levels.length;d++){
+    const levelDiv=document.createElement("div");
+    levelDiv.className="tree-level";
+    levels[d].forEach(node=>{
+      const nodeDiv=document.createElement("div");
+      nodeDiv.className="node";
+      nodeDiv.dataset.node=node;
+      const v=document.createElement("div");
+      v.className="node-value";
+      v.textContent=tree[node];
+      const r=document.createElement("div");
+      r.className="node-range";
+      r.textContent=`[${rangeL[node]},${rangeR[node]}]`;
+      nodeDiv.appendChild(v);
+      nodeDiv.appendChild(r);
+      levelDiv.appendChild(nodeDiv);
+    });
+    container.appendChild(levelDiv);
+  }
+  drawConnections();
+}
+
+function drawConnections(){
+  const outer=getEl("tree");
+  const svg=getEl("tree-lines");
+  const inner=getEl("tree-inner");
+  const rect=outer.getBoundingClientRect();
+  svg.setAttribute("width",rect.width);
+  svg.setAttribute("height",rect.height);
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+  const nodes=inner.querySelectorAll(".node");
+  nodes.forEach(nodeEl=>{
+    const nodeId=parseInt(nodeEl.dataset.node,10);
+    const leftId=nodeId*2,rightId=leftId+1;
+    const parentRect=nodeEl.getBoundingClientRect();
+    [leftId,rightId].forEach(id=>{
+      const childEl=inner.querySelector(`.node[data-node="${id}"]`);
+      if(!childEl) return;
+      const childRect=childEl.getBoundingClientRect();
+      const x1=parentRect.left+parentRect.width/2-rect.left;
+      const y1=parentRect.bottom-rect.top-4;
+      const x2=childRect.left+childRect.width/2-rect.left;
+      const y2=childRect.top-rect.top;
+      const line=document.createElementNS("http://www.w3.org/2000/svg","line");
+      line.setAttribute("x1",x1);
+      line.setAttribute("y1",y1);
+      line.setAttribute("x2",x2);
+      line.setAttribute("y2",y2);
+      line.setAttribute("stroke","rgba(148,163,184,0.6)");
+      line.setAttribute("stroke-width","1.2");
+      line.setAttribute("stroke-linecap","round");
+      line.setAttribute("stroke-dasharray","0");
+      svg.appendChild(line);
+    });
+  });
+}
+
+function buildHandler(){
+  const raw=getEl("arr").value.trim();
+  const nums=raw.split(/[\s,]+/).map(Number).filter(x=>!Number.isNaN(x));
+  if(!nums.length){
+    alert("배열을 입력하세요.");
+    return;
+  }
+  arr=nums;
+  n=arr.length;
+  tree=new Array(4*n).fill(0);
+  rangeL=new Array(4*n);
+  rangeR=new Array(4*n);
+  depths=new Array(4*n);
+  maxDepth=0;
+  buildTree(1,0,n-1,0);
+  clearHighlights();
+  renderArray();
+  renderTree();
+  const out=getEl("out");
+  out.textContent=`트리 빌드 완료 (원소 개수: ${n})`;
+  out.classList.add("highlight-glow");
+  setTimeout(()=>out.classList.remove("highlight-glow"),800);
+}
+
+function queryRec(node,ql,qr,l,r,usedNodes){
+  if(qr<l||r<ql) return 0;
+  usedNodes.push(node);
+  if(ql<=l&&r<=qr) return tree[node];
+  const mid=(l+r)>>1;
+  const left=node<<1,right=left|1;
+  const s1=queryRec(left,ql,qr,l,mid,usedNodes);
+  const s2=queryRec(right,ql,qr,mid+1,r,usedNodes);
+  return s1+s2;
+}
+
+function queryHandler(){
+  if(!n){
+    alert("먼저 트리를 빌드하세요.");
+    return;
+  }
+  const L=parseInt(getEl("l").value,10);
+  const R=parseInt(getEl("r").value,10);
+  if(Number.isNaN(L)||Number.isNaN(R)||L<0||R<0||L>R||R>=n){
+    alert("인덱스 범위를 확인하세요.");
+    return;
+  }
+  clearHighlights();
+  const usedNodes=[];
+  const res=queryRec(1,L,R,0,n-1,usedNodes);
+  usedNodes.forEach(id=>{
+    const nodeEl=document.querySelector(`.node[data-node="${id}"]`);
+    if(nodeEl) nodeEl.classList.add("hit");
+  });
+  for(let i=L;i<=R;i++){
+    const cell=document.querySelector(`.array-cell[data-index="${i}"]`);
+    if(cell) cell.classList.add("hit");
+  }
+  const out=getEl("out");
+  out.textContent=`구간합 [${L}, ${R}] = ${res}`;
+  out.classList.add("highlight-glow");
+  setTimeout(()=>out.classList.remove("highlight-glow"),800);
+}
+
+function updateRec(node,idx,val,l,r,path){
+  path.push(node);
+  if(l===r){
+    tree[node]=val;
+    return;
+  }
+  const mid=(l+r)>>1;
+  const left=node<<1,right=left|1;
+  if(idx<=mid) updateRec(left,idx,val,l,mid,path);
+  else updateRec(right,idx,val,mid+1,r,path);
+  tree[node]=tree[left]+tree[right];
+}
+
+function updateHandler(){
+  if(!n){
+    alert("먼저 트리를 빌드하세요.");
+    return;
+  }
+  const idx=parseInt(getEl("idx").value,10);
+  const val=parseFloat(getEl("val").value);
+  if(Number.isNaN(idx)||idx<0||idx>=n||Number.isNaN(val)){
+    alert("인덱스와 값을 확인하세요.");
+    return;
+  }
+  arr[idx]=val;
+  const path=[];
+  updateRec(1,idx,val,0,n-1,path);
+  clearHighlights();
+  renderArray();
+  renderTree();
+  path.forEach(id=>{
+    const nodeEl=document.querySelector(`.node[data-node="${id}"]`);
+    if(nodeEl) nodeEl.classList.add("updated");
+  });
+  const cell=document.querySelector(`.array-cell[data-index="${idx}"]`);
+  if(cell) cell.classList.add("updated");
+  const out=getEl("out");
+  out.textContent=`업데이트 완료: idx=${idx}, val=${val}`;
+  out.classList.add("highlight-glow");
+  setTimeout(()=>out.classList.remove("highlight-glow"),800);
+}
+
+getEl("build").onclick=buildHandler;
+getEl("query").onclick=queryHandler;
+getEl("update").onclick=updateHandler;
+window.addEventListener("resize",()=>{if(n) drawConnections();});
+</script>
+</body>
+</html>
